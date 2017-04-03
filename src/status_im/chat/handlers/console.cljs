@@ -7,7 +7,8 @@
             [status-im.data-store.messages :as messages]
             [status-im.i18n :refer [label]]
             [status-im.utils.random :as random]
-            [taoensso.timbre :as log]))
+            [taoensso.timbre :as log]
+            [status-im.components.status :as status]))
 
 (def console-commands
   {:password
@@ -42,7 +43,10 @@
                                  :chat-id      console-chat-id
                                  :from         console-chat-id
                                  :to           "me"}]))))
-         (dispatch [:debug-server-stop]))))})
+         (dispatch [:debug-server-stop]))))
+
+   :resetchaindata
+   status/reset-chain-data!})
 
 (def commands-names (set (keys console-commands)))
 

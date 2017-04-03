@@ -226,7 +226,9 @@
       (let [{:keys [params] :as command} (commands/get-chat-command db)
             {:keys [parameter-idx]} (commands/get-command-input db)
 
-            last-parameter? (= (inc parameter-idx) (count params))
+            params-count    (count params)
+            last-parameter? (or (zero? params-count)
+                                (= (inc parameter-idx) params-count))
 
             parameters      {:command command :input command-input}
 
@@ -234,7 +236,7 @@
             content'        (content-by-command command content)]
         (dispatch [:set-command-parameter
                    {:value     content'
-                    :parameter (params parameter-idx)}])
+                    :parameter (get params parameter-idx)}])
         (if last-parameter?
           (dispatch [:check-suggestions-trigger! parameters])
           (dispatch [::start-command-validation!
@@ -269,7 +271,7 @@
 (register-handler :request-command-preview
   (u/side-effect!
     (fn [{:keys [chats]} [_ {{:keys [command params content-command type]} :content
-               :keys [message-id chat-id on-requested] :as message} data-type]]
+                             :keys                                         [message-id chat-id on-requested] :as message} data-type]]
       (if-not (get-in chats [chat-id :commands-loaded])
         (do (dispatch [:add-commands-loading-callback
                        chat-id

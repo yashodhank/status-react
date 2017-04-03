@@ -440,4 +440,24 @@ class StatusModule extends ReactContextBaseJavaModule implements LifecycleEventL
     public void onConnectorDisconnected() {
 
     }
+
+    @ReactMethod
+    public void resetChainData() {
+        Log.d(TAG, "ResetChainData");
+        final Activity activity = getCurrentActivity();
+        if (activity == null) {
+            return;
+        }
+
+        Log.d(TAG, "Before ResetChainData");
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                String result = Statusgo.ResetChainData();
+                Log.d(TAG, "ResetChainData result: " + result);
+            }
+        };
+
+        thread.start();
+    }
 }

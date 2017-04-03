@@ -158,3 +158,6 @@
 
 (def adjust-resize 16)
 (def adjust-pan 32)
+
+(defn reset-chain-data! []
+  (call-module #(.resetChainData status)))

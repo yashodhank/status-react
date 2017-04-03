@@ -92,7 +92,7 @@
           chat-id (subscribe [:get-current-chat-id])]
       (reaction
         (let [parameter-index (commands/get-command-parameter-index @db @chat-id)]
-          (when parameter-index (nth (:params @command) parameter-index)))))))
+          (when parameter-index (get (:params @command) parameter-index)))))))
 
 (register-sub :get-chat-command-content
   (fn [db _]
