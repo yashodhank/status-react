@@ -159,5 +159,14 @@
 (def adjust-resize 16)
 (def adjust-pan 32)
 
-(defn reset-chain-data! []
-  (call-module #(.resetChainData status)))
+(def reset-in-progress? (atom false))
+(defn reset-chain-data! [callback]
+  (swap! reset-in-progress?
+         (fn [in-progress?]
+           (when-not in-progress?
+             (call-module #(.resetChainData
+                             status
+                             (fn []
+                               (reset! reset-in-progress? false)
+                               (callback)))))
+           true)))

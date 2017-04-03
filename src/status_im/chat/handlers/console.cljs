@@ -46,7 +46,20 @@
          (dispatch [:debug-server-stop]))))
 
    :resetchaindata
-   status/reset-chain-data!})
+   (fn []
+     (dispatch [:set :reset-in-progress? true])
+     (let [callback (fn []
+                      (dispatch [:received-message
+                                 {:message-id   (random/id)
+                                  :content      (label :t/done)
+                                  :content-type text-content-type
+                                  :outgoing     false
+                                  :chat-id      console-chat-id
+                                  :from         console-chat-id
+                                  :to           "me"
+                                  :status       :seen}])
+                      (dispatch [:set :reset-in-progress? false]))]
+       (status/reset-chain-data! callback)))})
 
 (def commands-names (set (keys console-commands)))
 

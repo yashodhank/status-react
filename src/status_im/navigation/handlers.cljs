@@ -53,8 +53,7 @@
 
 (defn- can-navigate-back? [db]
   (and (not (db :creating-account?))
-       ;; ...
-       ))
+       (not (db :reset-in-progress?))))
 
 (register-handler :navigate-back
   (enrich -preload-data!)

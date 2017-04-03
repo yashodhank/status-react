@@ -1838,19 +1838,7 @@ status.command({
     description: "Reset chaindata",
     color: "#7099e6",
     registeredOnly: true,
-    params: [],
-    preview: function (params) {
-        return status.components.text(
-            {},
-            "Done!"
-        );
-    },
-    shortPreview: function (params) {
-        return status.components.text(
-            {},
-            "Done!"
-        );
-    }
+    params: []
 });
 
 function browseSuggestions(params) {
