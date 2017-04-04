@@ -12,6 +12,13 @@
             [status-im.utils.platform :refer [platform-specific ios?]]
             [taoensso.timbre :as log]))
 
+
+(register-sub :group-chat?
+              (fn [db _]
+                (let [current-chat-id (subscribe [:get-current-chat-id])]
+                  (reaction (get-in @db [:chats @current-chat-id :group-chat])))))
+
+
 (register-sub :chat-properties
   (fn [db [_ properties]]
     (->> properties

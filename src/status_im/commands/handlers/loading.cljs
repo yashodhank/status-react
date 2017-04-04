@@ -1,5 +1,6 @@
 (ns status-im.commands.handlers.loading
-  (:require [re-frame.core :refer [path after dispatch subscribe trim-v debug]]
+  (:require-macros [reagent.ratom :refer [reaction]])
+  (:require [re-frame.core :refer [path after dispatch subscribe trim-v debug register-sub]]
             [status-im.utils.handlers :as u]
             [status-im.utils.utils :refer [http-get show-popup]]
             [clojure.string :as s]
@@ -14,17 +15,23 @@
 
 (def commands-js "commands.js")
 
+(defn fetch-group-chat-commands [app-db group-chat-id contacts-key]
+      (let [contacts (get-in app-db [:chats group-chat-id :contacts])
+            identities (mapv :identity contacts)
+            my-contacts (mapv #(get contacts-key %) identities)]
+        (doseq [contact my-contacts] (dispatch [::fetch-commands! contact]))))
+
 (defn load-commands!
-  [{:keys [current-chat-id contacts]} [identity]]
+  [{:keys [current-chat-id contacts] :as db} [identity]]
   (let [identity (or identity current-chat-id)
         contact  (or (get contacts identity)
-                     {:whisper-identity identity})]
+                     {:whisper-identity identity})
+        group-chat? (subscribe [:group-chat?])]
     (when identity
-      (dispatch [::fetch-commands! contact])))
-  ;; todo uncomment
-  #_(if-let [{:keys [file]} (commands/get-by-chat-id identity)]
-      (dispatch [::parse-commands! identity file])
-      (dispatch [::fetch-commands! identity])))
+      (if @group-chat?
+        (fetch-group-chat-commands db identity contacts)
+        (dispatch [::fetch-commands! contact])))))
+
 
 (defn fetch-commands!
   [_ [{:keys [whisper-identity dapp? dapp-url]}]]
@@ -98,16 +105,22 @@
                    (h/matches (name n) "password"))))
        (into {})))
 
+
 (defn add-commands
   [db [id _ {:keys [commands responses autorun]}]]
   (let [account    @(subscribe [:get-current-account])
         commands'  (filter-forbidden-names account id commands)
-        responses' (filter-forbidden-names account id responses)]
-    (-> db
-        (assoc-in [id :commands] (mark-as :command commands'))
-        (assoc-in [id :responses] (mark-as :response responses'))
-        (assoc-in [id :commands-loaded] true)
-        (assoc-in [id :autorun] autorun))))
+        responses' (filter-forbidden-names account id responses)
+        current-chat-id @(subscribe [:get-current-chat-id])
+        current-commands (into {} (get-in db [current-chat-id :commands]))]
+      (-> db
+          (assoc-in [current-chat-id :commands] (conj
+                                                 current-commands
+                                                 (mark-as :command commands')))
+          (assoc-in [current-chat-id :responses] (mark-as :response responses'))
+          (assoc-in [current-chat-id :commands-loaded] true)
+          (assoc-in [current-chat-id :autorun] autorun))))
+
 
 (defn save-commands-js!
   [_ [id file]]
