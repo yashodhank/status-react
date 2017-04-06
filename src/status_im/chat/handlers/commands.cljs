@@ -1,5 +1,5 @@
 (ns status-im.chat.handlers.commands
-  (:require [re-frame.core :refer [enrich after dispatch]]
+  (:require [re-frame.core :refer [enrich after dispatch subscribe]]
             [status-im.utils.handlers :refer [register-handler] :as u]
             [status-im.components.react :as react-comp]
             [status-im.components.status :as status]
@@ -30,17 +30,18 @@
   [{:keys [current-chat-id canceled-command] :as db} _]
   (when-not canceled-command
     (let [{:keys [command content params]} (get-in db [:chats current-chat-id :command-input])
+          command-owner (:command-owner command)
           data   (get-in db [:local-storage current-chat-id])
-          {:keys [name type]} command
+          {:keys [type name]} command
           path   [(if (= :command type) :commands :responses)
                   name
                   :params
                   0
                   :suggestions]
           params {:parameters (or params {})
-                  :context    (merge {:data data}
+                  :context    (merge {:data (if command-owner command-owner current-chat-id)}
                                      (command-dependent-context-params command))}]
-      (status/call-jail current-chat-id
+      (status/call-jail (if command-owner command-owner current-chat-id)
                         path
                         params
                         #(dispatch [:suggestions-handler {:command command
@@ -100,7 +101,7 @@
                 (do
                   (dispatch [:set-chat-ui-props :sending-disabled? false])
                   (dispatch [::add-validation-errors chat-id errors]))
-
+                
                 validationHandler
                 (do
                   (dispatch [:set-chat-ui-props :sending-disabled? false])
@@ -247,35 +248,41 @@
     (fn [db [_ {:keys [command-input chat-id address] :as data}]]
       (let [command-input'    (or command-input (commands/get-command-input db))
             {:keys [parameter-idx params command]} command-input'
-            {:keys [name type]} command
-            current-parameter (-> command
-                                  :params
-                                  (get parameter-idx)
-                                  :name)
-            to                (get-in db [:contacts chat-id :address])
-            context           {:current-parameter current-parameter
-                               :from              address
-                               :to                to}
-            path              [(if (= :command type) :commands :responses)
-                               name
-                               :validator]
-            parameters        {:context    context
-                               :parameters params}]
-        (status/call-jail chat-id
+            {:keys [name type]}      command
+            command-owner           (if (:command-owner command)
+                                      (:command-owner command)
+                                      chat-id)
+            current-parameter        (-> command
+                                         :params
+                                         (get parameter-idx)
+                                         :name)
+            to                       (get-in db [:contacts chat-id :address])
+            context                  {:current-parameter current-parameter
+                                      :from              address
+                                      :to                to}
+            path                     [(if (= :command type) :commands :responses)
+                                      name
+                                      :validator]
+            parameters               {:context    context
+                                      :parameters params}]
+        (status/call-jail command-owner
                           path
                           parameters
                           #(dispatch [::validate! command-input data %]))))))
 
 (register-handler :request-command-preview
   (u/side-effect!
-    (fn [{:keys [chats]} [_ {{:keys [command params content-command type]} :content
+    (fn [{:keys [chats] :as db} [_ {{:keys [command params content-command type]} :content
                :keys [message-id chat-id on-requested] :as message} data-type]]
       (if-not (get-in chats [chat-id :commands-loaded])
         (do (dispatch [:add-commands-loading-callback
                        chat-id
                        #(dispatch [:request-command-preview message data-type])])
             (dispatch [:load-commands! chat-id]))
-        (let [data-type (or data-type :preview)
+        (let [command-owner           (if-let [command-owner (get-in db [:chats chat-id :commands (keyword command) :command-owner])]
+                                        command-owner
+                                        chat-id)
+              data-type (or data-type :preview)
               path      [(if (= :response (keyword type)) :responses :commands)
                          (if content-command content-command command)
                          data-type]
@@ -287,7 +294,7 @@
                                             result
                                             (cu/generate-hiccup result))]))
                              (when on-requested (on-requested %)))]
-          (status/call-jail chat-id path params callback))))))
+          (status/call-jail command-owner path params callback))))))
 
 (register-handler :set-command-parameter
   (fn [db [_ {:keys [value parameter]}]]

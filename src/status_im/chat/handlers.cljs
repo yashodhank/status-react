@@ -1,6 +1,6 @@
 (ns status-im.chat.handlers
   (:require-macros [cljs.core.async.macros :as am])
-  (:require [re-frame.core :refer [enrich after debug dispatch]]
+  (:require [re-frame.core :refer [enrich after debug dispatch subscribe]]
             [status-im.models.commands :as commands]
             [clojure.string :as string]
             [status-im.components.styles :refer [default-chat-color]]
@@ -41,6 +41,10 @@
             status-im.chat.handlers.console
             [taoensso.timbre :as log]
             [tailrecursion.priority-map :refer [priority-map-by]]))
+
+(u/register-handler :add-key-log
+  (fn [db mymap]
+    (assoc db :my-log mymap)))
 
 (register-handler :set-chat-ui-props
   (fn [db [_ ui-element value]]
@@ -335,7 +339,7 @@
                       (map (fn [{:keys [chat-id] :as chat}]
                              (let [last-message (messages/get-last-message chat-id)]
                                [chat-id (assoc chat :last-message last-message)])))
-                      (into (priority-map-by compare-chats))))]
+                      (into {})))]
 
     (-> db
         (assoc :chats chats')

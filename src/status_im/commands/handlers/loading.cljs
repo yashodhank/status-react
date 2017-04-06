@@ -3,6 +3,7 @@
   (:require [re-frame.core :refer [path after dispatch subscribe trim-v debug register-sub]]
             [status-im.utils.handlers :as u]
             [status-im.utils.utils :refer [http-get show-popup]]
+            [clojure.walk :as w]
             [clojure.string :as s]
             [status-im.data-store.commands :as commands]
             [status-im.components.status :as status]
@@ -105,18 +106,33 @@
                    (h/matches (name n) "password"))))
        (into {})))
 
+(defn add-group-chat-command-owner-and-name
+  [id commands]
+  (let [group-chat? (subscribe [:group-chat?])]
+    (if @group-chat?
+      (->> commands
+           (map (fn [[k v]]
+                  [k (assoc v
+                         :command-owner (str id)
+                         :group-chat-command-name (str id "/" (:name v)))]))
+           (into {}))
+      commands)))
 
+(defn process-new-commands [account id commands]
+  (->> commands
+       (filter-forbidden-names account id)
+       (add-group-chat-command-owner-and-name id)
+       (mark-as :command)))
+       
 (defn add-commands
   [db [id _ {:keys [commands responses autorun]}]]
   (let [account    @(subscribe [:get-current-account])
-        commands'  (filter-forbidden-names account id commands)
+        commands'  (process-new-commands account id commands)
         responses' (filter-forbidden-names account id responses)
         current-chat-id @(subscribe [:get-current-chat-id])
         current-commands (into {} (get-in db [current-chat-id :commands]))]
       (-> db
-          (assoc-in [current-chat-id :commands] (conj
-                                                 current-commands
-                                                 (mark-as :command commands')))
+          (assoc-in [current-chat-id :commands] (conj current-commands commands'))
           (assoc-in [current-chat-id :responses] (mark-as :response responses'))
           (assoc-in [current-chat-id :commands-loaded] true)
           (assoc-in [current-chat-id :autorun] autorun))))

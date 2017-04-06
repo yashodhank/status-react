@@ -46,9 +46,10 @@
 
 (defn suggestion-list-item
   [[command {:keys [title description]
-             name  :name
-             :as   suggestion}]]
-  (let [label (str chat-consts/command-char name)]
+             name                     :name
+             group-chat-command-name  :group-chat-command-name
+             :as                       suggestion}]]
+  (let [label (str chat-consts/command-char (if group-chat-command-name group-chat-command-name name))]
     [touchable-highlight
      {:onPress #(set-command-input command)
       :style   st/suggestion-highlight}

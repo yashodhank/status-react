@@ -11,8 +11,9 @@
   (= (get text 0) chat-consts/command-char))
 
 (defn can-be-suggested? [text]
-  (fn [{:keys [name]}]
-    (.startsWith (str chat-consts/command-char name) text)))
+  (fn [{:keys [name group-chat-command-name]}]
+    (let [suggestion-name  (if group-chat-command-name group-chat-command-name name)]
+    (.startsWith (str chat-consts/command-char suggestion-name) text))))
 
 (defn get-suggestions
   [{:keys [current-chat-id] :as db} text]
