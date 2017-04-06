@@ -1,7 +1,8 @@
 (ns status-im.chat.models.password-input
   (:require [status-im.chat.constants :as const]
             [clojure.string :as str]
-            [taoensso.timbre :as log]))
+            [taoensso.timbre :as log]
+            [status-im.utils.platform :as platform]))
 
 (defn- get-modified-text [text arg-pos]
   (let [hide-fn      #(apply str (repeat (count %) const/masking-char))
@@ -17,16 +18,18 @@
         position      (-> (:start selection)
                           (- (inc (count command-name)))
                           (- (count (str/join const/spacing-char (take arg-pos old-args))))
-                          (- modification)
-                          (- (if (= arg-pos 0) 0 1)))
-        position      (if (= :added type) position (inc position))
-        symbols-count (.abs js/Math modification)]
+                          (- (if (= arg-pos 0) 1 2))
+                          (- (if platform/ios? modification 0)))
+        position      (if (= :added type) position (dec position))
+        symbols-count (.abs js/Math modification)
+        symbols       (subs (get new-args arg-pos)
+                            position
+                            (+ position symbols-count))]
     {:type     type
      :position position
-     :symbols  (when (= :added type)
-                 (subs (get new-args arg-pos)
-                       position
-                       (+ position symbols-count)))}))
+     :symbols  (if (= (count symbols) modification)
+                 symbols
+                 (apply str (repeat modification ".")))}))
 
 (defn- make-change [{:keys [command-name old-args new-args arg-pos selection] :as args}]
   (let [{:keys [type position symbols] :as c} (get-change args)

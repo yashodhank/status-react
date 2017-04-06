@@ -70,10 +70,10 @@
    :text-align-vertical :center
    :height              min-input-height
    :align-items         :center
-   :android             {:left (+ 18 left)
+   :android             {:left (+ 15 left)
                          :top  -1}
    :ios                 {:line-height min-input-height
-                         :left        (+ 15 left)}})
+                         :left        (+ 11 left)}})
 
 (def input-emoji-icon
   {:margin-top 7

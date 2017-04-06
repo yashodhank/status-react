@@ -60,24 +60,25 @@
                                    (.-layout)
                                    (.-width))]
                          (set-layout-width w))}
-     (utils/safe-trim (or @modified-text @input-text ""))]))
+     (or @modified-text @input-text "")]))
 
 (defn- input-helper [_]
   (let [input-text (subscribe [:chat :input-text])]
     (fn [{:keys [command width]}]
-      (when-let [placeholder (cond
-                               (= @input-text const/command-char)
-                               (i18n/label :t/type-a-command)
+      (let [real-args (remove str/blank? (:args command))]
+        (when-let [placeholder (cond
+                                 (= @input-text const/command-char)
+                                 (i18n/label :t/type-a-command)
 
-                               (and command (empty? (:args command)))
-                               (get-in command [:command :params 0 :placeholder])
+                                 (and command (empty? real-args))
+                                 (get-in command [:command :params 0 :placeholder])
 
-                               (and command
-                                    (= (count (:args command)) 1)
-                                    (input-model/text-ends-with-space? @input-text))
-                               (get-in command [:command :params 1 :placeholder]))]
-        [text {:style (style/input-helper-text width)}
-         placeholder]))))
+                                 (and command
+                                      (= (count real-args) 1)
+                                      (input-model/text-ends-with-space? @input-text))
+                                 (get-in command [:command :params 1 :placeholder]))]
+          [text {:style (style/input-helper-text width)}
+             placeholder])))))
 
 (defn- text-field [_]
   (let [input-text           (subscribe [:chat :input-text])
@@ -107,14 +108,8 @@
                                    (set-layout-height h))
         :on-selection-change    #(let [s (-> (.-nativeEvent %)
                                              (.-selection))]
-                                   ;; This will be a bit tricky:
-                                   ;; iOS calls onSelectionChange BEFORE onChangeText, while
-                                   ;; Android calls onChange text first.
-                                   ;; We need some consistency, so we call the callback with a small delay:
-                                   (js/setTimeout
-                                     (fn [] (dispatch [:set-chat-ui-props :selection {:start (.-start s)
-                                                                                      :end   (.-end s)}]))
-                                     20))
+                                   (dispatch [:set-chat-ui-props :selection {:start (.-start s)
+                                                                             :end   (.-end s)}]))
         :on-submit-editing      #(do (dispatch [:set-chat-ui-props :sending-in-progress? true])
                                      (dispatch [:send-current-message]))
         :on-focus               #(do (dispatch [:set-chat-ui-props :input-focused? true])

@@ -16,16 +16,17 @@
 (handlers/register-handler
   :set-chat-input-text
   (fn [{:keys [current-chat-id chats chat-ui-props] :as db} [_ text chat-id]]
-    (let [chat-id   (or chat-id current-chat-id)
-          selection (get-in chat-ui-props [chat-id :selection])]
+    (let [chat-id          (or chat-id current-chat-id)
+          selection        (get-in chat-ui-props [chat-id :selection])
+          ends-with-space? (input-model/text-ends-with-space? text)]
       (dispatch [:update-suggestions chat-id text])
 
       (if-let [{command :command} (input-model/selected-chat-command db chat-id text)]
-        (let [{old-args :args} (input-model/selected-chat-command db chat-id)
+        (let [{old-args :args :as c} (input-model/selected-chat-command db chat-id)
               text-splitted    (input-model/split-command-args text)
               new-args         (rest text-splitted)
               modifiers        (input-model/add-modifiers (:params command) new-args)
-              addition         (if (input-model/text-ends-with-space? text)
+              addition         (if ends-with-space?
                                  const/spacing-char)
               new-params       {:modified-text (str (input-model/apply-modifiers text-splitted modifiers)
                                                     addition)
@@ -237,7 +238,8 @@
   (handlers/side-effect!
     (fn [{:keys [current-chat-id] :as db} [_ chat-id]]
       (let [chat-id      (or chat-id current-chat-id)
-            chat-command (input-model/selected-chat-command db chat-id)]
+            chat-command (-> (input-model/selected-chat-command db chat-id)
+                             (update :args #(remove str/blank? %)))]
         (if chat-command
           (if (= :complete (input-model/command-completion chat-command))
             (dispatch [::proceed-command chat-command chat-id])
