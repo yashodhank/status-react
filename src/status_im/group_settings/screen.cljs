@@ -20,6 +20,7 @@
             [status-im.group-settings.views.color-settings :refer [color-settings]]))
 
 (defn remove-member []
+  (dispatch [:remove-member-commands-from-chat!])
   (dispatch [:remove-participants]))
 
 (defn close-member-menu []
