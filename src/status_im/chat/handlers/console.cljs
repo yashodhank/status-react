@@ -1,5 +1,5 @@
 (ns status-im.chat.handlers.console
-  (:require [re-frame.core :refer [dispatch dispatch-sync after]]
+  (:require [re-frame.core :refer [dispatch dispatch-sync after subscribe]]
             [status-im.utils.handlers :refer [register-handler] :as u]
             [status-im.constants :refer [console-chat-id
                                          text-content-type]]
@@ -39,7 +39,7 @@
                                  :content      (label :t/debug-enabled {:ip ip})
                                  :content-type text-content-type
                                  :outgoing     false
-                                 :chat-id      console-chat-id
+                                 :chat-id      @(subscribe [:get-current-chat-id])
                                  :from         console-chat-id
                                  :to           "me"}]))))
          (dispatch [:debug-server-stop]))))})
@@ -94,5 +94,3 @@
                                    :from         console-chat-id
                                    :to           "me"}])))
               (log/debug "ignoring command: " command))))))))
-
-

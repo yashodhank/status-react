@@ -60,22 +60,25 @@
           (not (s/blank? text))
           (dispatch [::prepare-message data]))))))
 
-(defn console-command? [chat-id command-name]
-  (and (= console-chat-id chat-id)
+(defn console-command? [chat-id command-owner command-name]
+  (and
+   (or (= console-chat-id chat-id)
+       (= console-chat-id command-owner))
        (console/commands-names (keyword command-name))))
 
 (register-handler ::check-commands-handlers!
   (u/side-effect!
-    (fn [_ [_ {:keys [command message chat-id] :as params}]]
+   (fn [_ [_ {:keys [command message chat-id] :as params}]]
       (let [{:keys [command] :as message} command]
         (let [params'      (assoc params :command-message message)
-              command-name (:name (:command message))]
+              command-name (:name (:command message))
+              command-owner (:command-owner command)]
           (if (:sent-to-jail? message)
             ;; todo there could be other reasons for "long-running"
             ;; hanling of the command besides sendTransaction
             (dispatch [:navigate-to-modal :confirm])
             (cond
-              (console-command? chat-id command-name)
+              (console-command? chat-id command-owner command-name)
               (dispatch [:invoke-console-command-handler! params'])
 
               (:has-handler command)

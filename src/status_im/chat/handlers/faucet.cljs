@@ -1,5 +1,5 @@
 (ns status-im.chat.handlers.faucet
-  (:require [re-frame.core :refer [dispatch]]
+  (:require [re-frame.core :refer [dispatch subscribe]]
             [status-im.utils.handlers :refer [register-handler] :as u]
             [status-im.utils.utils :refer [http-get]]
             [status-im.utils.random :as random]
@@ -28,7 +28,7 @@
               :content      content
               :content-type text-content-type
               :outgoing     false
-              :chat-id      console-chat-id
+              :chat-id      @(subscribe [:get-current-chat-id])
               :from         console-chat-id
               :to           "me"}]))
 
